@@ -269,6 +269,8 @@ Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için `LICENSE` dosy
 🐛 **Bug Report**: GitHub Issues kullanın  
 💡 **Feature Request**: Discussions bölümünden önerinizi paylaşın  
 📧 **İletişim**: Repository sahibi ile iletişime geçin
+- E-posta: [mehmetaksoy49@gmail.com]
+
 
 ---
 
