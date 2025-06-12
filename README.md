@@ -268,12 +268,11 @@ Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için `LICENSE` dosy
 
 🐛 **Bug Report**: GitHub Issues kullanın  
 💡 **Feature Request**: Discussions bölümünden önerinizi paylaşın  
-📧 **İletişim**: Repository sahibi ile iletişime geçin
-- E-posta: [mehmetaksoy49@gmail.com]
+📧 E-posta: [mehmetaksoy49@gmail.com]
 
+- Pull Request ile katkıda bulunun
+- Projeyi yıldızlamayı unutmayın! ⭐
 
 ---
 
-⭐ **Bu projeyi beğendiyseniz star vermeyi unutmayın!**
-
-*Son güncelleme: Aralık 2024*
+**Not**: Bu proje eğitim amaçlı geliştirilmiştir ve akademik çalışmalarda referans olarak kullanılabilir.
