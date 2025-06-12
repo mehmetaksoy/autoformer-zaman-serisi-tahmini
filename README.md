@@ -1,186 +1,277 @@
-# 🎬 BERT ile IMDB Film Yorumları Duygu Analizi
+# Autoformer ile Zaman Serisi Tahmini (ETTm1 Veri Seti)
 
-Bu proje, BERT (Bidirectional Encoder Representations from Transformers) modelini kullanarak IMDB film yorumları üzerinde duygu analizi gerçekleştiren kapsamlı bir makine öğrenmesi uygulamasıdır.
+Bu proje, uzun vadeli zaman serisi tahmini için geliştirilmiş Autoformer (Auto-Correlation Transformer) modelini ETTm1 (Electricity Transforming Temperature) veri seti üzerinde uygulayarak çok değişkenli zaman serisi tahmini gerçekleştirmektedir. Proje, modern transformer mimarilerinin zaman serisi analizi alanındaki potansiyelini göstermeyi ve comprehensive bir analiz sunmayı amaçlar.
 
-## 📋 Proje Özeti
+## 📋 İçindekiler
 
-Bu çalışma, doğal dil işleme (NLP) alanındaki güçlü transformatör mimarilerinden biri olan BERT modelini kullanarak metin sınıflandırma görevini gerçekleştirir. IMDB film yorumları veri seti üzerinde, yorumların pozitif mi yoksa negatif mi olduğunu tahmin eden bir model geliştirilmiştir.
+- [Proje Hakkında](#proje-hakkında)
+- [Amaç ve Kapsam](#amaç-ve-kapsam)
+- [Veri Seti](#veri-seti)
+- [Metodoloji](#metodoloji)
+- [Model Mimarisi](#model-mimarisi)
+- [Kurulum ve Kullanım](#kurulum-ve-kullanım)
+- [Sonuçlar ve Performans](#sonuçlar-ve-performans)
+- [Görselleştirmeler](#görselleştirmeler)
+- [Katkıda Bulunma](#katkıda-bulunma)
 
-### 🎯 Temel Amaçlar
-- Transformatör modellerinin metin verileri üzerindeki etkinliğini pratik bir örnekle göstermek
-- Derin öğrenme projesinin tüm adımlarını kapsamlı bir şekilde deneyimlemek
-- Hugging Face ekosisteminin modern NLP kütüphanelerinin kullanımını pekiştirmek
+## 🚀 Proje Hakkında
 
-## 🏆 Ana Sonuçlar
+Bu çalışma, Autoformer modelinin temel bileşenlerini (ayrıştırma blokları, otomatik korelasyon mekanizması) kullanarak elektrik transformatör sıcaklık ve yük verilerini analiz eder. **96 zaman adımı** geçmiş veriyi kullanarak **96 zaman adımı** gelecek tahmini gerçekleştiren model, çok değişkenli (multivariate) yaklaşımla 7 farklı özelliği eş zamanlı olarak tahmin eder.
 
-| Metrik | Değer |
-|--------|-------|
-| **Test Doğruluğu** | %92.04 |
-| **Test F1-Score** | 0.9205 |
-| **Test AUC** | 0.9758 |
-| **Eğitim Süresi** | ~22.12 dakika |
-| **Çıkarım Hızı** | ~3,242 örnek/saniye |
+### 🎯 Amaç ve Kapsam
 
-## 📊 Veri Seti
+- **Ana Hedef**: 'OT' (Oil Temperature - Yağ Sıcaklığı) ve diğer özellikleri çok değişkenli yaklaşımla tahmin
+- **Teknik Amaç**: Transformer mimarilerinin zaman serisi verilerindeki potansiyelini gösterme
+- **Akademik Katkı**: Autoformer'ın auto-correlation mekanizmasını praktik uygulamada test etme
+- **Metodolojik Değer**: Kapsamlı veri ön işleme, modelleme, eğitim ve değerlendirme pipeline'ı sunma
 
-**IMDB Film Yorumları Veri Seti** kullanılmıştır:
-- **Kaynak**: Hugging Face Datasets (`load_dataset("imdb")`)
-- **Toplam Örnek Sayısı**: 50,000 etiketli yorum
-- **Eğitim Seti**: 20,000 örnek (%80)
-- **Doğrulama Seti**: 5,000 örnek (%20)
-- **Test Seti**: 25,000 örnek
-- **Sınıflar**: Pozitif (1) ve Negatif (0) - Dengeli dağılım
+## 📊 Veri Seti: ETTm1 (Electricity Transformer Temperature)
 
-## 🔧 Teknik Detaylar
+### Veri Seti Özellikleri
+- **Kaynak**: [ETDataset Repository](https://github.com/zhouhaoyi/ETDataset)
+- **Zaman Aralığı**: 2016-07-01 ile 2018-06-26 (69,680 zaman adımı)
+- **Çözünürlük**: 15 dakikalık ölçümler
+- **Format**: CSV dosyası, eksik değer yok
 
-### Model Mimarisi
-- **Temel Model**: `bert-base-uncased`
-- **Sınıflandırma Katmanı**: 2 sınıf (pozitif/negatif)
-- **Tokenizasyon**: WordPiece, max_length=256
-- **Parametre Sayısı**: ~110M
+### Değişkenler
+| Değişken | Açıklama | Tür |
+|----------|----------|-----|
+| `date` | Zaman damgası | Datetime |
+| `HUFL` | High Useful Load (Yüksek Faydalı Yük) | Covariate |
+| `HULL` | High Useless Load (Yüksek Faydasız Yük) | Covariate |
+| `MUFL` | Medium Useful Load (Orta Faydalı Yük) | Covariate |
+| `MULL` | Medium Useless Load (Orta Faydasız Yük) | Covariate |
+| `LUFL` | Low Useful Load (Düşük Faydalı Yük) | Covariate |
+| `LULL` | Low Useless Load (Düşük Faydasız Yük) | Covariate |
+| `OT` | Oil Temperature (Yağ Sıcaklığı) | **Ana Hedef** |
 
-### Eğitim Konfigürasyonu
+### Veri Bölümü Stratejisi
+```
+📊 Toplam: 69,680 örnek
+├── 🎯 Eğitim (Train): 60% → 41,808 örnek
+├── ✅ Doğrulama (Validation): 20% → 13,936 örnek  
+└── 🧪 Test: 20% → 13,936 örnek
+```
+
+## 🛠 Metodoloji
+
+### 3.1 Veri Ön İşleme Pipeline'ı
 ```python
-# Ana eğitim parametreleri
-num_train_epochs = 3
-per_device_train_batch_size = 16
-per_device_eval_batch_size = 32
-learning_rate = 5e-5
-warmup_steps = 500
-weight_decay = 0.01
+# 1. Zaman İndeksi Dönüşümü
+df['date'] = pd.to_datetime(df['date'])
+df.set_index('date', inplace=True)
+
+# 2. Standardizasyon
+scaler = StandardScaler()
+scaled_data = scaler.fit_transform(train_data)
+
+# 3. Zaman Özellik Çıkarımı (5 özellik)
+time_features = time_features(df.index, freq='t')
+
+# 4. Sequence Oluşturma
+seq_len = 96      # Girdi dizisi uzunluğu (1 gün)
+label_len = 48    # Decoder başlangıç token
+pred_len = 96     # Tahmin ufku (1 gün)
 ```
 
-### Kütüphane Versiyonları
-Proje, aşağıdaki stabil kütüphane kombinasyonu ile geliştirilmiştir:
-- **Python**: 3.11.11
-- **PyTorch**: 2.5.1+cu124
-- **Transformers**: 4.48.3
-- **Datasets**: 3.6.0
-- **NumPy**: 1.26.4
+### 3.2 Autoformer Girdi Formatı
+Model için 5 farklı dizi türü oluşturulur:
+- **X_enc**: (samples, 96, 7) - Encoder ana girdisi
+- **X_mark_enc**: (samples, 96, 5) - Encoder zaman özellikleri  
+- **X_dec**: (samples, 144, 7) - Decoder girdisi (48 geçmiş + 96 sıfır)
+- **X_mark_dec**: (samples, 144, 5) - Decoder zaman özellikleri
+- **Y_true**: (samples, 96, 7) - Hedef değerler
 
-## 🚀 Kurulum ve Çalıştırma
+## 🏗 Model Mimarisi
 
-### 1. Gereksinimler
+### Autoformer Konfigürasyonu
+```python
+Model Hiperparametreleri:
+├── Sequence Length: 96 (1 gün geçmiş)
+├── Prediction Length: 96 (1 gün tahmin)  
+├── Model Dimension: 512
+├── Attention Heads: 8
+├── Encoder Layers: 2
+├── Decoder Layers: 1
+├── Feed Forward: 2048
+├── Auto-correlation Factor: 3
+├── Moving Average Window: 25
+├── Dropout: 0.05
+└── Toplam Parametreler: ~10.5M
+```
+
+### Auto-Correlation Mekanizması
+- **Geleneksel Self-Attention Alternatifi**: O(L log L) karmaşıklık
+- **Periyodik Örüntü Yakalama**: Zaman serisi için optimize edilmiş
+- **Trend-Seasonality Ayrıştırması**: Moving average ile decomposition
+
+## 🛠 Kurulum ve Kullanım
+
+### Sistem Gereksinimleri
+```
+🐍 Python: 3.11.12
+🔥 PyTorch: 2.6.0+cu124  
+🤗 Transformers: 4.48.3
+📊 NumPy: 2.0.2
+📈 Pandas: 2.2.2
+⚡ CUDA: Desteklenen GPU (önerilen)
+```
+
+### Hızlı Başlangıç
 ```bash
-pip install torch transformers datasets scikit-learn matplotlib seaborn numpy pandas
+# 1. Repository'yi klonlayın
+git clone https://github.com/kullaniciadi/autoformer-zaman-serisi-tahmini.git
+
+# 2. Google Colab'da açın ve sırasıyla çalıştırın:
 ```
 
-### 2. Google Colab'da Çalıştırma
-1. Notebook dosyasını (`BERT_ile_Metin_Sınıflandırma_(IMDB_Duygu_Analizi)Kopya.ipynb`) Google Colab'a yükleyin
-2. GPU Runtime'ını aktifleştirin: `Runtime > Change runtime type > Hardware accelerator > GPU`
-3. **Önemli**: İlk hücreyi çalıştırdıktan sonra runtime'ı yeniden başlatın
-4. Hücreleri sırasıyla çalıştırın
+### Adım Adım Çalıştırma
+1. **Hücre 1**: Kütüphane kurulumu → Runtime yeniden başlat
+2. **Hücre 2**: Kütüphane import ve sürüm kontrolü
+3. **Hücre 3**: ETTm1 veri seti yükleme ve keşif
+4. **Hücre 4**: Veri ön işleme ve sequence oluşturma
+5. **Hücre 5**: Autoformer kaynak kod entegrasyonu
+6. **Hücre 6**: Model tanımlama ve konfigürasyon
+7. **Hücre 6a**: Gelişmiş veri hazırlığı
+8. **Hücre 7**: Model eğitimi (10 epoch)
+9. **Hücre 8-11**: Test, değerlendirme ve görselleştirme
 
-### 3. Hücre Yapısı
+## 📈 Sonuçlar ve Performans
+
+### Eğitim Performansı
+| Epoch | Train Loss | Val Loss | Val MAE | Val RMSE | Val R² |
+|-------|------------|----------|---------|----------|--------|
+| 1 | 0.3248 | 0.4466 | 0.4617 | 0.6678 | 0.4569 |
+| 5 | 0.1421 | 0.3832 | 0.4235 | 0.6190 | 0.5106 |
+| **10** | **0.0854** | **0.3684** | **0.4177** | **0.6064** | **0.5240** |
+
+### Test Seti Performansı (Geri Ölçeklendirilmiş)
 ```
-Hücre 1: Kütüphane kurulumu (sonrasında runtime restart gerekli)
-Hücre 2: Import işlemleri ve versiyon kontrolü
-Hücre 3: IMDB veri setinin yüklenmesi
-Hücre 4: Veri setinin eğitim/doğrulama/test olarak bölünmesi
-Hücre 5: BERT tokenizer yükleme ve tokenizasyon
-Hücre 6: BERT modelinin yüklenmesi
-Hücre 7: Model eğitimi (epoch bazında değerlendirme)
-Hücre 8: Test seti performans değerlendirmesi
-Hücre 9: Karmaşıklık matrisi ve ROC eğrisi görselleştirmeleri
-Hücre 10: Eğitim kayıp grafikleri
-Hücre 11: Çıkarım hızı hesaplamaları
-```
-
-## 📈 Performans Analizi
-
-### Epoch Bazında Gelişim
-| Epoch | Eğitim Kaybı | Doğrulama Kaybı | Doğrulama Doğruluğu |
-|-------|--------------|-----------------|---------------------|
-| 1 | 0.3418 | 0.2475 | 0.9098 |
-| 2 | 0.1790 | 0.2194 | 0.9182 |
-| 3 | 0.0768 | 0.3635 | 0.9188 |
-
-### Test Seti Karmaşıklık Matrisi
-```
-           Tahmin
-Gerçek    Neg    Pos
-Neg     11490   1010
-Pos       981  11519
+🎯 Test Seti Metrikleri ('OT' Özelliği):
+├── MSE: 5.830495
+├── MAE: 1.917781  
+├── RMSE: 2.414642
+├── R²: 0.505747 (Varyansın %50.5'ini açıklıyor)
+└── MAPE: Güvenilir değil (sıfıra yakın değerler nedeniyle)
 ```
 
-### Önemli Gözlemler
-- Model 2. epoch sonrasında aşırı öğrenme (overfitting) belirtileri göstermiştir
-- `load_best_model_at_end=True` ile en iyi performanslı model kullanılmıştır
-- Test seti üzerinde yüksek genelleme performansı elde edilmiştir
+### Performans Analizi
+- ✅ **R² ≈ 0.51**: Model test verisindeki varyansın %51'ini açıklıyor
+- ✅ **Trend Yakalama**: Genel eğilimleri başarıyla modelliyor
+- ✅ **Erken Durdurma**: 10. epoch'ta en iyi performans
+- ⚠️ **MAPE Problemi**: Sıfıra yakın gerçek değerler nedeniyle güvenilir değil
 
-## 🛠️ Teknik Özellikler
-
-### Metrik Hesaplama
-Proje, kapsamlı performans değerlendirmesi için aşağıdaki metrikleri hesaplar:
-- **Accuracy**: Genel doğruluk oranı
-- **Precision**: Pozitif tahminlerin doğruluk oranı
-- **Recall (Sensitivity)**: Pozitif örneklerin yakalanma oranı
-- **F1-Score**: Precision ve Recall'ın harmonik ortalaması
-- **Specificity**: Negatif örneklerin doğru tanınma oranı
-- **AUC**: ROC eğrisi altında kalan alan
-
-### Görselleştirmeler
-- Epoch bazında eğitim ve doğrulama kayıp grafikleri
-- Doğrulama doğruluk gelişim grafiği
-- Test seti karmaşıklık matrisi (heatmap)
-- ROC eğrisi ve AUC skoru
-
-## 🔍 Proje Yapısı
-
+### Süre Performansı
 ```
-├── BERT_ile_Metin_Sınıflandırma_(IMDB_Duygu_Analizi)Kopya.ipynb
-├── README.md
-└── results_epoch_evaluation/
-    ├── best_model/           # En iyi model checkpoint'i
-    ├── checkpoint-*/         # Epoch bazında checkpoint'ler
-    └── runs/                 # TensorBoard logları
+⏱️ Performans Metrikleri:
+├── Toplam Eğitim Süresi: 19.47 dakika
+├── Çıkarım Hızı: 0.001176 saniye/pencere
+└── İşlem Kapasitesi: 850.68 pencere/saniye
 ```
 
-## 🎓 Öğrenme Çıktıları
+## 📊 Görselleştirmeler
 
-Bu proje aşağıdaki konularda pratik deneyim sağlar:
-- **BERT modelinin fine-tuning süreci**
-- **Hugging Face Transformers ve Datasets kütüphaneleri**
-- **PyTorch ve Trainer API kullanımı**
-- **Metin ön işleme ve tokenizasyon**
-- **Model değerlendirme ve görselleştirme teknikleri**
-- **Kütüphane versiyon yönetimi ve hata ayıklama**
+### 1. Eğitim İzleme Grafikleri
+- **Kayıp Grafikleri**: Epoch bazında train/validation loss tracking
+- **Metrik Evolüsyonu**: MAE, RMSE, R² gelişim grafikleri
+- **Convergence Analizi**: Model yakınsama durumu
 
-## 🚨 Önemli Notlar
+### 2. Tahmin Kalitesi Analizi  
+- **Gerçek vs Tahmin**: Zaman serisi overlay grafikleri
+- **Hata Dağılımı**: Residual histogram ve density plots
+- **Scatter Plot**: Predicted vs actual değerler
 
-### Kütüphane Uyumluluğu
-Proje gelişimi sırasında NumPy ve Datasets versiyonları arasında uyumluluk sorunları yaşanmıştır. Bu sorunlar, spesifik versiyonların sabitlenmesi ile çözülmüştür.
+### 3. İstatistiksel Validasyon
+- **ACF/PACF**: Residual'ların otokorelasyon analizi  
+- **Residual Plot**: Sistematik hata kontrolü
+- **Error Distribution**: Hata dağılımının normallik testi
 
-### Bellek ve Hesaplama Gereksinimleri
-- **GPU**: NVIDIA L4 (Colab Pro) önerilir
-- **RAM**: En az 12-16 GB
-- **Depolama**: Model checkpoint'leri için ~2-3 GB
+## 🔄 Proje Workflow
 
-## 🔮 Gelişime Açık Alanlar
+```mermaid
+graph LR
+    A[ETTm1 Veri Yükleme] --> B[Veri Ön İşleme]
+    B --> C[Zaman Özellik Çıkarımı]  
+    C --> D[Sequence Oluşturma]
+    D --> E[Autoformer Modeli]
+    E --> F[Eğitim & Validasyon]
+    F --> G[Test & Değerlendirme]
+    G --> H[Görselleştirme & Analiz]
+```
 
-1. **Model Çeşitlendirmesi**: RoBERTa, DeBERTa gibi diğer transformatör modelleri
-2. **Hiperparametre Optimizasyonu**: Learning rate, batch size, epoch sayısı
-3. **Tokenizasyon İyileştirmesi**: Farklı max_length değerleri
-4. **Regularizasyon**: Dropout, early stopping teknikleri
-5. **Ensemble Yöntemleri**: Birden fazla modelin kombinasyonu
+## 🎓 Akademik Katkılar
 
-## 📝 Lisans
+### Teknik İnovasyonlar
+- **Auto-Correlation Mechanism**: Zaman serisi için optimize edilmiş attention
+- **Decomposition Architecture**: Trend-seasonal pattern ayrıştırması
+- **Multivariate Forecasting**: 7 özellik eş zamanlı tahmini
 
-Bu proje eğitim amaçlı geliştirilmiştir ve MIT lisansı altında paylaşılmaktadır.
+### Metodolojik Değer
+- **Comprehensive Pipeline**: End-to-end zaman serisi analizi
+- **Robust Evaluation**: Çoklu metrik değerlendirmesi  
+- **Reproducible Research**: Detaylı dokümantasyon ve kod
 
-## 👨‍💻 Katkıda Bulunma
+## 📁 Proje Yapısı
 
-Proje geliştirmelerine katkıda bulunmak için:
-1. Repository'yi fork edin
-2. Feature branch oluşturun (`git checkout -b feature/YeniOzellik`)
-3. Değişikliklerinizi commit edin (`git commit -am 'Yeni özellik eklendi'`)
-4. Branch'inizi push edin (`git push origin feature/YeniOzellik`)
-5. Pull Request oluşturun
+```
+autoformer-zaman-serisi-tahmini/
+│
+├── 📓 Autoformer_ile_Zaman_Serisi_Tahmini.ipynb
+├── 📖 README.md
+├── 📊 data/
+│   └── ETTm1.csv (otomatik indirilir)
+├── 🔧 autoformer_official_code/ (otomatik klonlanır)
+├── 💾 models/
+│   └── autoformer_best_model_v2.pth
+└── 📈 results/
+    ├── training_plots/
+    ├── prediction_plots/
+    └── performance_metrics/
+```
+
+## 🤝 Katkıda Bulunma
+
+### Geliştirme Alanları
+- [ ] Farklı sequence length'leri ile deneyim
+- [ ] Diğer ETT veri setleri (ETTh1, ETTh2, ETTm2) ile test
+- [ ] Hyperparameter optimization
+- [ ] Model ensemble teknikleri
+- [ ] Real-time prediction pipeline
+
+### Katkı Süreci
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/yeni-ozellik`)
+3. Commit changes (`git commit -am 'Yeni özellik: XYZ'`)
+4. Push to branch (`git push origin feature/yeni-ozellik`)
+5. Create Pull Request
+
+## 📚 Referanslar
+
+1. **Wu, H., Xu, J., Wang, J., & Long, M.** (2021). Autoformer: Decomposition transformers with auto-correlation for long-term series forecasting. *Advances in Neural Information Processing Systems*, 34.
+
+2. **Zhou, H., Zhang, S., Peng, J., Zhang, S., Li, J., Xiong, H., & Zhang, W.** (2021). Informer: Beyond efficient transformer for long sequence time-series forecasting. *AAAI 2021*.
+
+3. **ETDataset Repository**: https://github.com/zhouhaoyi/ETDataset
+
+## 🙏 Teşekkürler
+
+- **THUML Research Group**: Orijinal Autoformer implementasyonu
+- **ETDataset Contributors**: Açık kaynak veri seti
+- **PyTorch Team**: Deep learning framework
+- **Google Colab**: Ücretsiz GPU kaynaklarıa
+
+## 📜 Lisans
+
+Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için `LICENSE` dosyasına bakınız.
 
 ## 📞 İletişim
 
-Sorularınız için GitHub Issues bölümünü kullanabilirsiniz.
+🐛 **Bug Report**: GitHub Issues kullanın  
+💡 **Feature Request**: Discussions bölümünden önerinizi paylaşın  
+📧 **İletişim**: Repository sahibi ile iletişime geçin
 
 ---
 
-*Bu proje, modern NLP tekniklerinin pratik uygulamasını göstermek ve BERT modelinin güçlü özelliklerini keşfetmek amacıyla geliştirilmiştir.*
+⭐ **Bu projeyi beğendiyseniz star vermeyi unutmayın!**
+
+*Son güncelleme: Aralık 2024*
